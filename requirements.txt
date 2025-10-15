@@ -1,0 +1,88 @@
+# =========================
+# 1. Core Python Libraries
+# =========================
+numpy           # Numerical computations
+scipy           # Scientific computing
+pandas          # Data manipulation and preprocessing
+matplotlib      # Plotting and visualization
+seaborn         # Advanced statistical visualization
+tqdm            # Progress bars for loops
+
+# =========================
+# 2. NLP Preprocessing Libraries
+# =========================
+nltk            # Tokenization, stemming, lemmatization
+spacy           # Advanced tokenization, NER, dependency parsing
+gensim          # Word2Vec, Doc2Vec, fastText embeddings
+regex           # Advanced regular expressions for text cleaning
+
+# =========================
+# 3. Embedding & Feature Extraction
+# =========================
+torch           # PyTorch framework for model training/inference
+torchvision     # Image utilities for PyTorch
+torchaudio      # Audio utilities for PyTorch
+tensorflow      # Alternative to PyTorch for deep learning
+transformers    # Hugging Face transformers library
+sentence-transformers # Pretrained embedding models
+torchtext       # Text utilities for PyTorch
+
+# =========================
+# 4. Model Training & Fine-tuning
+# =========================
+accelerate      # Efficient multi-GPU / distributed training
+bitsandbytes    # 8-bit and 4-bit model quantization
+peft            # Parameter-efficient fine-tuning (LoRA, adapters)
+optimum         # Hugging Face model optimizations
+trl             # Reinforcement learning for LLMs (RLHF)
+
+# =========================
+# 5. Data Loading & Pipelines
+# =========================
+datasets        # Hugging Face datasets library
+torchdata       # PyTorch data pipelines
+pyarrow         # Efficient columnar data handling (Parquet)
+faiss-cpu       # Vector search for embeddings (or faiss-gpu)
+scikit-learn    # TF-IDF, feature extraction, train-test split
+
+# =========================
+# 6. Deployment & Serving
+# =========================
+fastapi         # API server for serving models
+uvicorn         # ASGI server for FastAPI
+flask           # Lightweight web API alternative
+gradio          # Quick demo UI for models
+streamlit       # Interactive dashboards for models
+docker          # Containerization (Python API)
+onnxruntime     # Run ONNX optimized models
+
+# =========================
+# 7. Multimodal / Specialized LLM Libraries
+# =========================
+diffusers       # Text-to-image pipelines (Stable Diffusion)
+torchaudio      # Audio processing for speech models
+opencv-python   # Image/video processing
+pillow          # Image handling
+timm            # Pretrained vision models
+moviepy         # Video editing
+
+# =========================
+# 8. Utilities & Advanced Tools
+# =========================
+wandb           # Experiment tracking
+tensorboard     # Visualization of training metrics
+rich            # Pretty console output
+psutil          # System monitoring
+joblib          # Parallel processing
+protobuf        # Model serialization
+
+# =========================
+# 9. Optional / Cutting-edge Tools
+# =========================
+trlx            # RLHF training
+deepspeed       # Efficient training for massive LLMs
+jax             # High-performance machine learning framework
+jaxlib          # JAX core library
+flax            # High-level neural network library for JAX
+langchain       # Build applications using LLMs
+llama-index     # Knowledge retrieval for LLMs
