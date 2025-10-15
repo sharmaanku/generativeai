@@ -1,0 +1,55 @@
+from transformers import pipeline
+
+# ----------------- Load model -----------------
+print("✅ Loading GPT-2 model for email reply generation...")
+generator = pipeline(
+    "text-generation",
+    model="gpt2",
+    device=-1  # -1 = CPU
+)
+
+# ----------------- Function -----------------
+def draft_email_reply(message: str, tone: str) -> str:
+    """
+    Generate an email reply based on message content and desired tone.
+    """
+    prompt = f"""
+You are an expert email assistant.
+Read the customer's email and draft a reply with a {tone} tone.
+
+Customer's message:
+\"\"\"{message}\"\"\"
+
+Your reply:
+"""
+    # Generate text
+    response = generator(
+        prompt,
+        max_new_tokens=180,      # Only generate 180 new tokens
+        num_return_sequences=1,
+        temperature=0.7,
+        truncation=True           # Truncate input if too long
+    )
+
+    draft = response[0]["generated_text"]
+
+    # Remove the prompt from the output to avoid repetition
+    if "Your reply:" in draft:
+        draft = draft.split("Your reply:")[-1].strip()
+
+    return draft
+
+
+# ----------------- Test Scenario -----------------
+if __name__ == "__main__":
+    customer_message = (
+        "Hi, I ordered a laptop last week but it hasn't been delivered yet. "
+        "Can you please check the status and let me know when I can expect it?"
+    )
+
+    reply_tone = "apologetic and professional"
+
+    print("📝 Customer message:")
+    print(customer_message)
+    print("\n💡 Generated reply:\n")
+    print(draft_email_reply(customer_message, reply_tone))
