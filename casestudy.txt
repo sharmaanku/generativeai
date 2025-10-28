@@ -1,0 +1,155 @@
+You are tasked with automating the setup of AWS Cognito Identity and Access Management (IAM) roles for a multi-role application.
+
+The goal is to:
+
+Programmatically create a Cognito User Pool, App Client, and Identity Pool.
+
+Define three user roles — Admins, Editors, and Viewers — each with different access permissions to Amazon S3.
+
+Automatically create IAM Roles for each group and attach AWS-managed IAM policies.
+
+Map Cognito user groups to IAM roles so that users logging in via Cognito receive appropriate AWS permissions automatically.
+
+You need to write a Python script using the boto3 SDK that performs all these operations end-to-end.
+
+
+
+  import boto3
+import json
+import time
+from botocore.exceptions import ClientError
+
+# Initialize clients
+session = boto3.session.Session()
+region = session.region_name or "us-east-1"
+cognito_idp = session.client('cognito-idp', region_name=region)
+cognito_identity = session.client('cognito-identity', region_name=region)
+iam = session.client('iam', region_name=region)
+sts = session.client('sts', region_name=region)
+
+account_id = sts.get_caller_identity()['Account']
+print(f"🧭 Using AWS Account: {account_id}, Region: {region}")
+
+# Step 1: Create User Pool
+user_pool_name = "DemoUserPool"
+try:
+    user_pool = cognito_idp.create_user_pool(PoolName=user_pool_name)
+    user_pool_id = user_pool['UserPool']['Id']
+    print(f"✅ Created User Pool: {user_pool_id}")
+except ClientError as e:
+    if e.response['Error']['Code'] == 'InvalidParameterException':
+        print("⚠ User pool creation failed due to invalid parameters.")
+    else:
+        raise e
+
+# Step 2: Create App Client
+app_client_name = "DemoAppClient"
+app_client = cognito_idp.create_user_pool_client(
+    UserPoolId=user_pool_id,
+    ClientName=app_client_name,
+    GenerateSecret=False
+)
+app_client_id = app_client['UserPoolClient']['ClientId']
+print(f"✅ Created App Client: {app_client_id}")
+
+# Step 3: Create Identity Pool
+identity_pool_name = "DemoIdentityPool"
+identity_pool = cognito_identity.create_identity_pool(
+    IdentityPoolName=identity_pool_name,
+    AllowUnauthenticatedIdentities=False,
+    CognitoIdentityProviders=[{
+        'ProviderName': f'cognito-idp.{region}.amazonaws.com/{user_pool_id}',
+        'ClientId': app_client_id,
+        'ServerSideTokenCheck': True
+    }]
+)
+identity_pool_id = identity_pool['IdentityPoolId']
+print(f"✅ Created Identity Pool: {identity_pool_id}")
+
+# Step 4: Define roles and policies
+groups = {
+    "Admins": "arn:aws:iam::aws:policy/AmazonS3FullAccess",
+    "Editors": "arn:aws:iam::aws:policy/AmazonS3FullAccess",
+    "Viewers": "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
+}
+
+group_roles = {}
+
+# Step 5: Create IAM roles and Cognito groups
+for group_name, policy_arn in groups.items():
+    role_name = f"{group_name}Role"
+    trust_policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Effect": "Allow",
+                "Principal": {"Federated": "cognito-identity.amazonaws.com"},
+                "Action": "sts:AssumeRoleWithWebIdentity",
+                "Condition": {
+                    "StringEquals": {
+                        "cognito-identity.amazonaws.com:aud": identity_pool_id
+                    }
+                }
+            }
+        ]
+    }
+
+    try:
+        role = iam.create_role(
+            RoleName=role_name,
+            AssumeRolePolicyDocument=json.dumps(trust_policy),
+            Description=f"Role for {group_name} group"
+        )
+        iam.attach_role_policy(RoleName=role_name, PolicyArn=policy_arn)
+        role_arn = role['Role']['Arn']
+        print(f"✅ Created IAM Role: {role_arn}")
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'EntityAlreadyExists':
+            role_arn = iam.get_role(RoleName=role_name)['Role']['Arn']
+            print(f"⚠ IAM Role already exists: {role_arn}")
+        else:
+            raise e
+
+    # Create Cognito group
+    try:
+        cognito_idp.create_group(
+            GroupName=group_name,
+            UserPoolId=user_pool_id,
+            RoleArn=role_arn,
+            Description=f"{group_name} group with {policy_arn}"
+        )
+        print(f"✅ Created Cognito group: {group_name}")
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'GroupExistsException':
+            print(f"⚠ Cognito group already exists: {group_name}")
+        else:
+            raise e
+
+    group_roles[group_name] = role_arn
+
+# Step 6: Map IAM Roles to Cognito Groups in Identity Pool
+provider_name = f'cognito-idp.{region}.amazonaws.com/{user_pool_id}:{app_client_id}'
+
+try:
+    cognito_identity.set_identity_pool_roles(
+        IdentityPoolId=identity_pool_id,
+        Roles={
+            'authenticated': group_roles['Viewers']  # Default for authenticated users
+        },
+        RoleMappings={
+            provider_name: {
+                'Type': 'Token',
+                'AmbiguousRoleResolution': 'AuthenticatedRole',
+                'RulesConfiguration': {
+                    'Rules': [
+                        {'Claim': 'cognito:groups', 'MatchType': 'Equals', 'Value': 'Admins', 'RoleARN': group_roles['Admins']},
+                        {'Claim': 'cognito:groups', 'MatchType': 'Equals', 'Value': 'Editors', 'RoleARN': group_roles['Editors']},
+                        {'Claim': 'cognito:groups', 'MatchType': 'Equals', 'Value': 'Viewers', 'RoleARN': group_roles['Viewers']}
+                    ]
+                }
+            }
+        }
+    )
+    print("✅ Successfully mapped IAM Roles to Cognito Groups")
+except ClientError as e:
+    print(f"❌ Failed to map roles: {e}")
